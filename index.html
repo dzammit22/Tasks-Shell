@@ -64,7 +64,7 @@
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:8px;
     border-radius:12px; padding:12px 14px; font-weight:600; cursor:pointer; user-select:none;
-    border:1px solid var(--border); background:#0f1835; color:var(--text);
+    border:1px solid var(--border); background:#0f1835; color:#fff;
   }
   .btn.primary{background:linear-gradient(180deg, #5c7dff, #5575f1); border:0}
   .btn.ghost{background:transparent}
@@ -145,35 +145,32 @@
     main{padding:18px 18px 96px}
     .stats-grid{grid-template-columns: repeat(4, 1fr)}
     .grid.two{grid-template-columns: 1fr 1fr}
-  /* === Fix long task titles wrapping (Tasks + Modal) === */
-.task .top{
-  align-items:flex-start;     /* top-align so multi-line titles look tidy */
-  flex-wrap:wrap;             /* allow badges to flow onto the next line */
-  gap:10px 8px;               /* tighter horizontal gap on wrap */
-}
-.task .top > input[type="checkbox"]{
-  flex:0 0 auto;              /* checkbox keeps its size */
-  margin-top:2px;             /* align with first line of title */
-}
-.task .title{
-  flex:1 1 180px;             /* take remaining space, but allow shrinking */
-  min-width:0;                /* let it actually shrink in flexbox */
-  white-space:normal;         /* allow wrapping */
-  overflow-wrap:anywhere;     /* break very long words/URLs if needed */
-  word-break:break-word;      /* fallback for older engines */
-  line-height:1.25;
-}
+  }
 
-/* Badges should stay tidy but not force horizontal scrolling */
-.task .top .badge{
-  white-space:nowrap;         /* keep each badge intact */
-  flex:0 0 auto;              /* badges don't steal title width */
-}
-
-/* Optional: tighten big buttons in narrow screens so they don't push content */
-@media (max-width:420px){
-  .task .actions .btn{ padding:10px 12px; }
-}
+  /* === FIX: Wrap long task titles (Tasks & Modal) === */
+  .task .top{
+    align-items:flex-start;
+    flex-wrap:wrap;           /* allow badges to wrap under the title */
+    gap:10px 8px;
+  }
+  .task .top > input[type="checkbox"]{
+    flex:0 0 auto;
+    margin-top:2px;           /* line up with the first line of title */
+  }
+  .task .title{
+    flex:1 1 180px;           /* title takes remaining space, can shrink */
+    min-width:0;              /* enable flexbox shrinking in Safari/Chrome */
+    white-space:normal;       /* allow wrapping */
+    overflow-wrap:anywhere;   /* break long tokens/URLs */
+    word-break:break-word;    /* fallback */
+    line-height:1.25;
+  }
+  .task .top .badge{
+    white-space:nowrap;
+    flex:0 0 auto;            /* badges do not steal width from title */
+  }
+  @media (max-width:420px){
+    .task .actions .btn{ padding:10px 12px; }
   }
 </style>
 </head>
@@ -280,6 +277,7 @@
         <h2>At a Glance</h2>
         <div class="stats-grid" id="statsTop"></div>
       </div>
+
       <div class="section card">
         <h2>Per-Category Breakdown</h2>
         <div class="list" id="statsCats"></div>
@@ -302,10 +300,12 @@
         </div>
         <p class="muted" style="margin-top:8px">Export includes tasks, completions, and computed stats. Import replaces current data.</p>
       </div>
+
       <div class="section card">
         <h2>Preferences</h2>
         <label class="chip"><input type="checkbox" id="set_hide_rec" /> Default: hide recurring in Calendar</label>
       </div>
+
       <div class="section card">
         <h2>About</h2>
         <p class="muted">This skeleton is designed for gamification extensions (streaks, badges, leveling). All core data lives in localStorage and works offline.</p>
@@ -337,7 +337,7 @@
 
 <script>
 /* ========= Storage & Model ========= */
-const STORAGE_KEY = 'taskbones.v3'; // bump for timezone-safe calendar
+const STORAGE_KEY = 'taskbones.v3'; // timezone-safe + compact calendar
 const CATS = ["Home","Fitness","Finance","Skills","Work","Rose","Other"];
 const PRI_WEIGHTS = { Low:1, Medium:2, High:3 };
 
@@ -355,16 +355,8 @@ function dateFromYMD(ymd){
   return new Date(y, (m||1)-1, d||1);
 }
 function todayYMD(){ return toYMDLocal(new Date()); }
-
 function fmtDate(ymd){ if(!ymd) return ''; return dateFromYMD(ymd).toLocaleDateString(); }
 function compareDateYMD(a,b){ return a===b; }
-
-function addMonths(ymd, n){
-  if(!ymd) return '';
-  const d = dateFromYMD(ymd);
-  d.setMonth(d.getMonth()+n);
-  return toYMDLocal(d);
-}
 
 /* ========= DB ========= */
 function defaultDB(){
@@ -406,6 +398,7 @@ function loadDB(){
 const $ = sel => document.querySelector(sel);
 function uid(){ return 't_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function escapeHTML(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" }[m])); }
 
 /* ========= Task CRUD ========= */
 function upsertTask(data){
@@ -467,13 +460,16 @@ function applyTaskFilters(list){
 function renderTasks(){
   const list = applyTaskFilters(db.tasks.slice().sort((a,b)=>{
     const ad = a.doneAt ? 1 : 0, bd = b.doneAt ? 1 : 0;
-    if(ad!==bd) return ad-bd;
+    if(ad!==bd) return ad-bd; // incomplete first
     const aDue = a.due||'9999-12-31', bDue = b.due||'9999-12-31';
     return aDue.localeCompare(bDue);
   }));
   const container = $('#taskList');
   container.innerHTML = '';
-  if(list.length===0){ container.innerHTML = `<div class="muted">No tasks yet. Add one above!</div>`; return; }
+  if(list.length===0){
+    container.innerHTML = `<div class="muted">No tasks yet. Add one above!</div>`;
+    return;
+  }
   for(const t of list){
     const el = document.createElement('div');
     el.className = 'task' + (t.doneAt?' done':'');
@@ -495,7 +491,6 @@ function renderTasks(){
     container.appendChild(el);
   }
 }
-function escapeHTML(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" }[m])); }
 
 function renderStats(){
   $('#pillTotals').lastElementChild.textContent = 'Total Completed: ' + db.stats.totalCompleted;
@@ -572,7 +567,7 @@ function renderCalendar(){
 
   for(let i=0;i<42;i++){
     const d = new Date(start); d.setDate(start.getDate()+i);
-    const ymd = toYMDLocal(d); // ✅ local YMD (no UTC shift)
+    const ymd = toYMDLocal(d); // local YMD, no UTC shift
     const cell = document.createElement('div'); cell.className='cell';
     if(d.getMonth()!==calCursor.getMonth()) cell.classList.add('other');
     const today = new Date(); if(toYMDLocal(d)===toYMDLocal(today)) cell.classList.add('today');
@@ -588,7 +583,7 @@ function renderCalendar(){
     if(sum.total>0){
       const pv = document.createElement('div');
       pv.className='pv-row';
-      const topCats = sum.byCatArray.slice(0,4);
+      const topCats = sum.byCatArray.slice(0,4); // [ {cat,count} ... ]
       topCats.forEach(it=>{
         const dot = document.createElement('span');
         dot.className='dotcat cat-'+it.cat;
@@ -631,6 +626,7 @@ function renderCalendar(){
 }
 
 function summarizeDay(items){
+  // returns { total, hasRec, byCatArray:[{cat,count}] (sorted desc) }
   const map = new Map(); let hasRec=false;
   for(const t of items){
     map.set(t.category, (map.get(t.category)||0)+1);
