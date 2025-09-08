@@ -145,6 +145,35 @@
     main{padding:18px 18px 96px}
     .stats-grid{grid-template-columns: repeat(4, 1fr)}
     .grid.two{grid-template-columns: 1fr 1fr}
+  /* === Fix long task titles wrapping (Tasks + Modal) === */
+.task .top{
+  align-items:flex-start;     /* top-align so multi-line titles look tidy */
+  flex-wrap:wrap;             /* allow badges to flow onto the next line */
+  gap:10px 8px;               /* tighter horizontal gap on wrap */
+}
+.task .top > input[type="checkbox"]{
+  flex:0 0 auto;              /* checkbox keeps its size */
+  margin-top:2px;             /* align with first line of title */
+}
+.task .title{
+  flex:1 1 180px;             /* take remaining space, but allow shrinking */
+  min-width:0;                /* let it actually shrink in flexbox */
+  white-space:normal;         /* allow wrapping */
+  overflow-wrap:anywhere;     /* break very long words/URLs if needed */
+  word-break:break-word;      /* fallback for older engines */
+  line-height:1.25;
+}
+
+/* Badges should stay tidy but not force horizontal scrolling */
+.task .top .badge{
+  white-space:nowrap;         /* keep each badge intact */
+  flex:0 0 auto;              /* badges don't steal title width */
+}
+
+/* Optional: tighten big buttons in narrow screens so they don't push content */
+@media (max-width:420px){
+  .task .actions .btn{ padding:10px 12px; }
+}
   }
 </style>
 </head>
