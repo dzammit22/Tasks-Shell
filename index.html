@@ -308,12 +308,36 @@
 
 <script>
 /* ========= Storage & Model ========= */
-const STORAGE_KEY = 'taskbones.v2'; // bump for calendar preview change
+const STORAGE_KEY = 'taskbones.v3'; // bump for timezone-safe calendar
 const CATS = ["Home","Fitness","Finance","Skills","Work","Rose","Other"];
 const PRI_WEIGHTS = { Low:1, Medium:2, High:3 };
 
 let db = loadDB();
 
+/* ========= Date helpers (LOCAL, timezone-safe) ========= */
+function toYMDLocal(date){
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+function dateFromYMD(ymd){
+  const [y,m,d] = ymd.split('-').map(Number);
+  return new Date(y, (m||1)-1, d||1);
+}
+function todayYMD(){ return toYMDLocal(new Date()); }
+
+function fmtDate(ymd){ if(!ymd) return ''; return dateFromYMD(ymd).toLocaleDateString(); }
+function compareDateYMD(a,b){ return a===b; }
+
+function addMonths(ymd, n){
+  if(!ymd) return '';
+  const d = dateFromYMD(ymd);
+  d.setMonth(d.getMonth()+n);
+  return toYMDLocal(d);
+}
+
+/* ========= DB ========= */
 function defaultDB(){
   return {
     tasks: [],
@@ -328,36 +352,31 @@ function defaultDB(){
 }
 function saveDB(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); refreshUI(); }
 function loadDB(){
-  // try to migrate from v1 key if present
-  const tryKeys = [STORAGE_KEY, 'taskbones.v1'];
-  for(const k of tryKeys){
+  const candidates = [STORAGE_KEY, 'taskbones.v2', 'taskbones.v1'];
+  for(const k of candidates){
     const raw = localStorage.getItem(k);
-    if(raw){
-      try{
-        const parsed = JSON.parse(raw);
-        for (const c of CATS){
-          if(!parsed.stats.byCategory[c]) parsed.stats.byCategory[c]={Low:0,Medium:0,High:0,score:0};
-          if(parsed.stats.byCategory[c].low){
-            const {low,medium,high,score}=parsed.stats.byCategory[c];
-            parsed.stats.byCategory[c]={Low:low||0,Medium:medium||0,High:high||0,score:score||0};
-          }
+    if(!raw) continue;
+    try{
+      const parsed = JSON.parse(raw);
+      for(const c of CATS){
+        if(!parsed.stats.byCategory[c]) parsed.stats.byCategory[c] = {Low:0,Medium:0,High:0,score:0};
+        if(parsed.stats.byCategory[c].low){
+          const {low,medium,high,score} = parsed.stats.byCategory[c];
+          parsed.stats.byCategory[c] = {Low:low||0, Medium:medium||0, High:high||0, score:score||0};
         }
-        if(parsed.settings?.hideRecurringInCalendar == null) parsed.settings.hideRecurringInCalendar=false;
-        if(k!=="taskbones.v2") localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-        return parsed;
-      }catch(e){ console.warn('DB load error from',k,e); }
-    }
+      }
+      if(parsed.settings?.hideRecurringInCalendar == null) parsed.settings.hideRecurringInCalendar=false;
+      if(k!==STORAGE_KEY) localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      return parsed;
+    }catch(e){ console.warn('DB load error', e); }
   }
   return defaultDB();
 }
 
 /* ========= Helpers ========= */
 const $ = sel => document.querySelector(sel);
-function fmtDate(d){ if(!d) return ''; const t=new Date(d); return t.toLocaleDateString(); }
 function uid(){ return 't_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
-function compareDateYMD(a,b){ return a===b; }
-function addMonths(ymd, n){ if(!ymd) return ''; const d=new Date(ymd); d.setMonth(d.getMonth()+n); return d.toISOString().slice(0,10); }
 
 /* ========= Task CRUD ========= */
 function upsertTask(data){
@@ -524,25 +543,23 @@ function renderCalendar(){
 
   for(let i=0;i<42;i++){
     const d = new Date(start); d.setDate(start.getDate()+i);
-    const ymd = d.toISOString().slice(0,10);
+    const ymd = toYMDLocal(d); // ✅ local YMD (no UTC shift)
     const cell = document.createElement('div'); cell.className='cell';
     if(d.getMonth()!==calCursor.getMonth()) cell.classList.add('other');
-    const today = new Date(); if(d.toDateString()===today.toDateString()) cell.classList.add('today');
+    const today = new Date(); if(toYMDLocal(d)===toYMDLocal(today)) cell.classList.add('today');
 
     const items = projectTasksForDay(ymd, hideRec, filterByCat);
     const sum = summarizeDay(items);
 
-    // Header row with date + small recurrence hint if present
     const header = document.createElement('div');
     header.className='d';
     header.innerHTML = `${d.getDate()} ${sum.hasRec ? '<span class="pv-rec">↻</span>' : ''}`;
     cell.appendChild(header);
 
-    // Compact preview row: up to 4 category dots + total count
     if(sum.total>0){
       const pv = document.createElement('div');
       pv.className='pv-row';
-      const topCats = sum.byCatArray.slice(0,4); // [ {cat,count} ... ]
+      const topCats = sum.byCatArray.slice(0,4);
       topCats.forEach(it=>{
         const dot = document.createElement('span');
         dot.className='dotcat cat-'+it.cat;
@@ -585,7 +602,6 @@ function renderCalendar(){
 }
 
 function summarizeDay(items){
-  // returns { total, hasRec, byCatArray:[{cat,count}] (sorted desc) }
   const map = new Map(); let hasRec=false;
   for(const t of items){
     map.set(t.category, (map.get(t.category)||0)+1);
@@ -604,24 +620,14 @@ function projectTasksForDay(ymd, hideRecurring, onlyCat){
     if(isRec){
       if(hideRecurring) continue;
       if(!t.due) continue;
-      const due = t.due;
-      switch(t.recurrence){
-        case 'daily': {
-          if(new Date(ymd) >= new Date(due)) res.push(t);
-          break;
-        }
-        case 'weekly': {
-          const start = new Date(due);
-          const check = new Date(ymd);
-          if(check >= start && start.getDay()===check.getDay()) res.push(t);
-          break;
-        }
-        case 'monthly': {
-          const start = new Date(due);
-          const check = new Date(ymd);
-          if(check >= start && start.getDate()===check.getDate()) res.push(t);
-          break;
-        }
+      const start = dateFromYMD(t.due);
+      const check = dateFromYMD(ymd);
+      if(t.recurrence==='daily'){
+        if(check >= start) res.push(t);
+      }else if(t.recurrence==='weekly'){
+        if(check >= start && start.getDay()===check.getDay()) res.push(t);
+      }else if(t.recurrence==='monthly'){
+        if(check >= start && start.getDate()===check.getDate()) res.push(t);
       }
     }else{
       if(t.due && compareDateYMD(t.due, ymd)) res.push(t);
@@ -631,7 +637,7 @@ function projectTasksForDay(ymd, hideRecurring, onlyCat){
 }
 
 function openDayModal(ymd, items){
-  $('#dayTitle').textContent = (new Date(ymd)).toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  $('#dayTitle').textContent = dateFromYMD(ymd).toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'});
   const wrap = $('#dayTasks'); wrap.innerHTML='';
   if(items.length===0){ wrap.innerHTML = `<div class="muted">No tasks for this day.</div>`; }
   for(const t of items){
