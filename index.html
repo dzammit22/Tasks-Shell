@@ -33,11 +33,8 @@
     background:linear-gradient(180deg, rgba(16,24,48,.9), rgba(16,24,48,.6));
     border-bottom:1px solid var(--border); padding:10px 14px; display:flex; align-items:center; gap:10px;
   }
-  header h1{font-size:18px; margin:0; letter-spacing:.3px}
-  .pill{
-    margin-left:auto; display:inline-flex; gap:8px; align-items:center; font-size:12px;
-    background:rgba(124,155,255,.15); color:var(--accent); padding:6px 10px; border-radius:999px; border:1px solid rgba(124,155,255,.25)
-  }
+  header h1{font-size:18px; margin:0}
+  .pill{margin-left:auto; display:inline-flex; gap:8px; align-items:center; font-size:12px; background:rgba(124,155,255,.15); color:var(--accent); padding:6px 10px; border-radius:999px; border:1px solid rgba(124,155,255,.25)}
   .pill .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
   main{overflow:auto; padding:14px; padding-bottom:84px}
   .tabview{display:none}
@@ -52,31 +49,21 @@
   .row > *{flex:1}
   .grid{display:grid; gap:10px}
   .two{grid-template-columns: 1fr 1fr}
-  .three{grid-template-columns: repeat(3, 1fr)}
 
   .input, select, button, textarea{
     width:100%; background:#0e1530; color:var(--text); border:1px solid var(--border);
     border-radius:var(--radius-sm); padding:12px; font-size:14px; outline:none;
   }
   textarea{min-height:72px; resize:vertical}
-  select{appearance:none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-                              linear-gradient(135deg, var(--muted) 50%, transparent 50%),
-                              linear-gradient(to right, #0000, #0000);
-         background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px), 100% 0;
-         background-size:6px 6px, 6px 6px, 2.5em 2.5em; background-repeat:no-repeat}
-
-  .btn{
-    display:inline-flex; align-items:center; justify-content:center; gap:8px;
-    border-radius:12px; padding:12px 14px; font-weight:600; cursor:pointer; user-select:none;
-    border:1px solid var(--border); background:#0f1835; color:#fff;
-  }
+  select{appearance:none}
+  label.small{font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:12px; padding:12px 14px; font-weight:600; cursor:pointer; user-select:none; border:1px solid var(--border); background:#0f1835; color:#fff}
   .btn.primary{background:linear-gradient(180deg, #5c7dff, #5575f1); border:0}
   .btn.ghost{background:transparent}
   .btn.warn{background:linear-gradient(180deg,#ffb020,#ff9b00); color:#241400; border:0}
   .btn.danger{background:linear-gradient(180deg,#ff6b6b,#ff4d4d); border:0}
   .btn:active{transform:translateY(1px)}
   .chip{display:inline-flex; gap:8px; align-items:center; padding:8px 10px; border-radius:999px; border:1px solid var(--border); background:#0e1530; font-size:12px}
-  .chip input{margin:0}
   .list{display:flex; flex-direction:column; gap:10px}
 
   .task{padding:12px; border-radius:12px; border:1px solid var(--border); background:#0e1530; display:grid; gap:6px;}
@@ -125,32 +112,14 @@
     backdrop-filter: blur(10px) saturate(120%);
     border-top:1px solid var(--border); display:grid; grid-template-columns: repeat(4, 1fr);
   }
-  nav button{
-    padding:10px 8px; background:transparent; border:0; color:#cbd5ff; font-weight:700; font-size:13px;
-    display:flex; flex-direction:column; align-items:center; gap:4px;
-  }
+  nav button{padding:10px 8px; background:transparent; border:0; color:#cbd5ff; font-weight:700; font-size:13px; display:flex; flex-direction:column; align-items:center; gap:4px}
   nav button.active{color:var(--accent)}
-  nav .ico{font-size:18px; line-height:1}
   .sp{height:72px}
-
-  /* Modal */
   .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55)}
   .modal.show{display:flex}
   .sheet{width:min(680px, 92vw); max-height:80vh; overflow:auto; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow)}
   .sheet .hd{display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--border)}
   .sheet .bd{padding:12px 14px}
-
-  @media (min-width:880px){
-    main{padding:18px 18px 96px}
-    .stats-grid{grid-template-columns: repeat(4, 1fr)}
-    .grid.two{grid-template-columns: 1fr 1fr}
-  }
-
-  /* === FIX: Wrap long task titles (Tasks & Modal) === */
-  .task .top{align-items:flex-start;flex-wrap:wrap;gap:10px 8px}
-  .task .top > input[type="checkbox"]{flex:0 0 auto;margin-top:2px}
-  .task .title{flex:1 1 180px;min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.25}
-  .task .top .badge{white-space:nowrap;flex:0 0 auto}
 </style>
 </head>
 <body>
@@ -207,7 +176,7 @@
           <input type="hidden" id="f_id">
           <div class="row" style="grid-column:1 / -1; justify-content:flex-end; gap:10px">
             <button type="button" class="btn ghost" id="btnResetForm">Clear</button>
-            <button class="btn primary" id="btnSaveTask">Save Task</button>
+            <button type="submit" class="btn primary" id="btnSaveTask">Save Task</button>
           </div>
         </form>
       </div>
@@ -222,7 +191,6 @@
           <select id="fl_pri"><option value="">All Priorities</option>
             <option>Low</option><option>Medium</option><option>High</option>
           </select>
-          <!-- DATE FILTER -->
           <select id="fl_date">
             <option value="">All Dates</option>
             <option value="today">Today</option>
@@ -277,13 +245,13 @@
       <div class="section card">
         <h2>Data</h2>
         <div class="row">
-          <button class="btn" id="btnExport">Export JSON</button>
+          <button type="button" class="btn" id="btnExport">Export JSON</button>
           <label class="btn" style="cursor:pointer">
             Import JSON
             <input type="file" id="fileImport" accept="application/json" style="display:none">
           </label>
-          <button class="btn warn" id="btnRebuild">Rebuild Stats</button>
-          <button class="btn danger" id="btnReset">Reset All</button>
+          <button type="button" class="btn warn" id="btnRebuild">Rebuild Stats</button>
+          <button type="button" class="btn danger" id="btnReset">Reset All</button>
         </div>
         <p class="muted" style="margin-top:8px">Export includes tasks, completions, and computed stats. Import replaces current data.</p>
       </div>
@@ -314,7 +282,7 @@
   <div class="sheet">
     <div class="hd">
       <strong id="dayTitle">Day</strong>
-      <button class="btn ghost" id="closeModal">Close</button>
+      <button type="button" class="btn ghost" id="closeModal">Close</button>
     </div>
     <div class="bd">
       <div class="list" id="dayTasks"></div>
@@ -330,18 +298,14 @@ const PRI_WEIGHTS = { Low:1, Medium:2, High:3 };
 
 let db = loadDB();
 
-/* ========= Date helpers (LOCAL, timezone-safe) ========= */
+/* ========= Date helpers ========= */
 function toYMDLocal(date){
   const y = date.getFullYear();
   const m = String(date.getMonth()+1).padStart(2,'0');
   const d = String(date.getDate()).padStart(2,'0');
   return `${y}-${m}-${d}`;
 }
-function dateFromYMD(ymd){
-  const [y,m,d] = (ymd||'').split('-').map(Number);
-  if(!y||!m||!d) return null;
-  return new Date(y, (m||1)-1, d||1);
-}
+function dateFromYMD(ymd){ const [y,m,d] = (ymd||'').split('-').map(Number); if(!y||!m||!d) return null; return new Date(y,(m||1)-1,d||1); }
 function todayYMD(){ return toYMDLocal(new Date()); }
 function startOfWeekYMD(base=new Date()){ const d=new Date(base); const off=(d.getDay()+6)%7; d.setDate(d.getDate()-off); return toYMDLocal(d); }
 function endOfWeekYMD(base=new Date()){ const d=dateFromYMD(startOfWeekYMD(base)); d.setDate(d.getDate()+6); return toYMDLocal(d); }
@@ -353,10 +317,7 @@ function compareDateYMD(a,b){ return a===b; }
 function defaultDB(){
   return {
     tasks: [],
-    stats: {
-      totalCompleted: 0,
-      byCategory: Object.fromEntries(CATS.map(c=>[c,{ Low:0, Medium:0, High:0, score:0 }]))
-    },
+    stats: { totalCompleted: 0, byCategory: Object.fromEntries(CATS.map(c=>[c,{ Low:0, Medium:0, High:0, score:0 }])) },
     settings: { hideRecurringInCalendar: false }
   };
 }
@@ -366,12 +327,9 @@ function loadDB(){
     const raw = localStorage.getItem(STORAGE_KEY);
     if(!raw) return defaultDB();
     const parsed = JSON.parse(raw);
-    // Ensure shape
     if(!parsed.stats) parsed.stats = defaultDB().stats;
     if(!parsed.stats.byCategory) parsed.stats.byCategory = defaultDB().stats.byCategory;
-    for(const c of CATS){
-      if(!parsed.stats.byCategory[c]) parsed.stats.byCategory[c] = {Low:0,Medium:0,High:0,score:0};
-    }
+    for(const c of CATS){ if(!parsed.stats.byCategory[c]) parsed.stats.byCategory[c] = {Low:0,Medium:0,High:0,score:0}; }
     if(!parsed.settings) parsed.settings = defaultDB().settings;
     if(parsed.settings.hideRecurringInCalendar == null) parsed.settings.hideRecurringInCalendar = false;
     return parsed;
@@ -415,13 +373,12 @@ function toggleDone(id){
 }
 function adjustStats(cat, pri, delta){
   db.stats.totalCompleted = Math.max(0, db.stats.totalCompleted + delta);
-  const b = db.stats.byCategory[cat];
-  if(!b) return;
+  const b = db.stats.byCategory[cat]; if(!b) return;
   b[pri] = Math.max(0, (b[pri]||0) + delta);
-  b.score = Math.max(0, (b.score||0) + delta * (PRI_WEIGHTS[pri]||1));
+  b.score = Math.max(0, (b.score||0) + delta * (pri==='High'?3:pri==='Medium'?2:1));
 }
 
-/* ========= Filters (recurrence-aware date filter) ========= */
+/* ========= Recurrence-aware Date Filtering ========= */
 function occursOnDay(task, ymd){
   const rec = task.recurrence || 'none';
   const due = task.due || '';
@@ -479,7 +436,7 @@ function renderTasks(){
     el.className = 'task' + (t.doneAt?' done':'');
     el.innerHTML = `
       <div class="top">
-        <input type="checkbox" ${t.doneAt?'checked':''} data-act="toggle" data-id="${t.id}">
+        <input type="checkbox" ${t.doneAt?'checked':''} data-id="${t.id}">
         <div class="title">${escapeHTML(t.title)}</div>
         <span class="badge cat cat-${t.category}">${t.category}</span>
         <span class="badge ${t.priority==='Low'?'low':t.priority==='High'?'high':'med'}">${t.priority}</span>
@@ -488,18 +445,18 @@ function renderTasks(){
       </div>
       ${t.notes ? `<div class="muted">${escapeHTML(t.notes)}</div>`:''}
       <div class="actions">
-        <button class="btn" data-act="edit" data-id="${t.id}">Edit</button>
-        <button class="btn danger" data-act="del" data-id="${t.id}">Delete</button>
+        <button type="button" class="btn" data-act="edit" data-id="${t.id}">Edit</button>
+        <button type="button" class="btn danger" data-act="del" data-id="${t.id}">Delete</button>
       </div>
     `;
     container.appendChild(el);
   }
 }
+
 function renderStats(){
   $('#pillTotals').lastElementChild.textContent = 'Total Completed: ' + db.stats.totalCompleted;
-
-  const top = $('#statsTop'); if(!top) return; top.innerHTML = '';
-  const low = sumByPri('Low'), med = sumByPri('Medium'), high = sumByPri('High');
+  const top = $('#statsTop'); if(!top) return; top.innerHTML='';
+  const low=sumByPri('Low'), med=sumByPri('Medium'), high=sumByPri('High');
   top.appendChild(statCard('Completed (Low)', low));
   top.appendChild(statCard('Completed (Medium)', med));
   top.appendChild(statCard('Completed (High)', high));
@@ -508,12 +465,9 @@ function renderStats(){
 
   const cats = $('#statsCats'); if(!cats) return; cats.innerHTML='';
   for(const c of CATS){
-    const b = db.stats.byCategory[c];
-    const sum = b.Low + b.Medium + b.High;
-    const sc = b.score;
-    const pct = totalScore ? Math.round((sc/totalScore)*100) : 0;
-    const el = document.createElement('div');
-    el.className='stat';
+    const b=db.stats.byCategory[c]; const sum=b.Low+b.Medium+b.High; const sc=b.score;
+    const pct = totalScore? Math.round((sc/totalScore)*100) : 0;
+    const el=document.createElement('div'); el.className='stat';
     el.innerHTML = `
       <div class="row" style="align-items:baseline; justify-content:space-between">
         <div style="font-weight:800">${c}</div>
@@ -529,7 +483,7 @@ function renderStats(){
     `;
     cats.appendChild(el);
   }
-  function statCard(label, n){ const d=document.createElement('div'); d.className='stat'; d.innerHTML=`<div class="muted">${label}</div><div class="n">${n}</div>`; return d; }
+  function statCard(label, n){ const d=document.createElement('div'); d.className='stat'; d.innerHTML=`<div class="muted">${label}</div><div class="n">${n}</div>`; return d;}
   function sumByPri(pri){ return CATS.reduce((a,c)=>a+(db.stats.byCategory[c]?.[pri]||0),0); }
 }
 
@@ -545,9 +499,9 @@ function renderCalendar(){
   head.className='cal-head';
   const monthLabel = calCursor.toLocaleString(undefined,{month:'long', year:'numeric'});
   head.innerHTML = `
-    <button class="btn" id="cal_prev">&larr;</button>
+    <button type="button" class="btn" id="cal_prev">&larr;</button>
     <div style="font-weight:800">${monthLabel}</div>
-    <button class="btn" id="cal_next">&rarr;</button>`;
+    <button type="button" class="btn" id="cal_next">&rarr;</button>`;
   wrap.appendChild(head);
 
   const grid = document.createElement('div'); grid.className='cal-grid';
@@ -638,12 +592,29 @@ function openDayModal(ymd, items){
       </div>
       ${t.notes ? `<div class="muted">${escapeHTML(t.notes)}</div>`:''}
       <div class="actions">
-        <button class="btn" data-act="edit" data-id="${t.id}">Edit</button>
-        <button class="btn" data-act="jump" data-id="${t.id}">Select in Tasks</button>
+        <button type="button" class="btn" data-act="edit" data-id="${t.id}">Edit</button>
+        <button type="button" class="btn" data-act="jump" data-id="${t.id}">Select in Tasks</button>
       </div>`;
     wrap.appendChild(el);
   }
   $('#dayModal').classList.add('show');
+}
+
+/* ========= Edit helper ========= */
+function loadTaskIntoForm(id){
+  const t = db.tasks.find(x=>x.id===id);
+  if(!t) return;
+  $('#f_id').value = t.id;
+  $('#f_title').value = t.title || '';
+  $('#f_cat').value = t.category || 'Other';
+  $('#f_pri').value = t.priority || 'Medium';
+  $('#f_due').value = t.due || '';
+  $('#f_rec').value = t.recurrence || 'none';
+  $('#f_notes').value = t.notes || '';
+  const effortEl = document.getElementById('f_effort');
+  if (effortEl) effortEl.value = t.effort ?? '';
+  document.querySelector('nav button[data-tab="tasks"]')?.click();
+  setTimeout(()=> document.getElementById('f_title')?.focus(), 0);
 }
 
 /* ========= UI Wiring ========= */
@@ -655,7 +626,8 @@ function refreshUI(){
 function clearForm(){ $('#f_id').value=''; $('#taskForm').reset(); }
 $('#btnResetForm').onclick = clearForm;
 
-$('#btnSaveTask').addEventListener('click', (e)=>{
+// Save
+document.getElementById('taskForm').addEventListener('submit',(e)=>{
   e.preventDefault();
   const data = {
     id: $('#f_id').value || undefined,
@@ -671,20 +643,29 @@ $('#btnSaveTask').addEventListener('click', (e)=>{
   upsertTask(data); clearForm();
 });
 
-$('#taskList').addEventListener('click', (e)=>{
-  const btn = e.target.closest('[data-act]'); if(!btn && e.target.type!=='checkbox') return;
-  if(e.target.type==='checkbox'){ toggleDone(e.target.getAttribute('data-id')); return; }
-  const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
-  if(act==='del'){ if(confirm('Delete this task?')) deleteTask(id);
-  }else if(act==='edit'){
-    const t = db.tasks.find(x=>x.id===id); if(!t) return;
-    $('#f_id').value=t.id; $('#f_title').value=t.title; $('#f_cat').value=t.category;
-    $('#f_pri').value=t.priority; $('#f_due').value=t.due||''; $('#f_rec').value=t.recurrence||'none';
-    $('#f_notes').value=t.notes||''; document.querySelector('nav button[data-tab="tasks"]').click();
-  }
+/* --- ROBUST taskList activation (click + touchend) --- */
+const taskList = document.getElementById('taskList');
+['click','touchend'].forEach(evt=>{
+  taskList.addEventListener(evt,(e)=>{
+    const target = e.target.closest('button[data-act][data-id], input[type="checkbox"][data-id]');
+    if(!target) return;
+    e.preventDefault(); e.stopPropagation();
+
+    // Checkbox toggle
+    if(target.matches('input[type="checkbox"]')){
+      toggleDone(target.getAttribute('data-id'));
+      return;
+    }
+
+    // Buttons
+    const id = target.getAttribute('data-id');
+    const act = target.getAttribute('data-act');
+    if(act==='del'){ if(confirm('Delete this task?')) deleteTask(id); return; }
+    if(act==='edit'){ loadTaskIntoForm(id); return; }
+  }, {passive:false});
 });
 
-/* Filters listeners (Safari-safe) */
+/* Filters */
 document.querySelectorAll('#fl_cat,#fl_pri,#fl_date').forEach(el=>el.addEventListener('change', renderTasks));
 document.querySelector('#fl_q').addEventListener('input', renderTasks);
 
@@ -696,21 +677,19 @@ $('#cal_cat').addEventListener('change', renderCalendar);
 /* Modal */
 $('#closeModal').onclick = ()=>$('#dayModal').classList.remove('show');
 $('#dayModal').addEventListener('click',(e)=>{ if(e.target.id==='dayModal') $('#dayModal').classList.remove('show'); });
-$('#dayTasks').addEventListener('click',(e)=>{
-  const btn = e.target.closest('[data-act]'); if(!btn) return;
-  const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
-  if(act==='edit'){
-    const t = db.tasks.find(x=>x.id===id); if(!t) return;
-    $('#f_id').value=t.id; $('#f_title').value=t.title; $('#f_cat').value=t.category;
-    $('#f_pri').value=t.priority; $('#f_due').value=t.due||''; $('#f_rec').value=t.recurrence||'none';
-    $('#f_notes').value=t.notes||''; document.querySelector('nav button[data-tab="tasks"]').click();
-    $('#dayModal').classList.remove('show');
-  }else if(act==='jump'){
-    document.querySelector('nav button[data-tab="tasks"]').click();
-    const node=[...document.querySelectorAll('#taskList .task')].find(n=>n.querySelector(`[data-id="${id}"]`));
-    if(node){ node.scrollIntoView({behavior:'smooth', block:'center'}); node.style.outline='2px solid var(--accent)'; setTimeout(()=>node.style.outline='none',1200); }
-    $('#dayModal').classList.remove('show');
-  }
+['click','touchend'].forEach(evt=>{
+  document.getElementById('dayTasks').addEventListener(evt,(e)=>{
+    const btn = e.target.closest('[data-act][data-id]'); if(!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
+    if(act==='edit'){ loadTaskIntoForm(id); $('#dayModal').classList.remove('show'); }
+    else if(act==='jump'){
+      document.querySelector('nav button[data-tab="tasks"]').click();
+      const node=[...document.querySelectorAll('#taskList .task')].find(n=>n.querySelector(`[data-id="${id}"]`));
+      if(node){ node.scrollIntoView({behavior:'smooth', block:'center'}); node.style.outline='2px solid var(--accent)'; setTimeout(()=>node.style.outline='none',1200); }
+      $('#dayModal').classList.remove('show');
+    }
+  }, {passive:false});
 });
 
 /* Tabs */
@@ -756,12 +735,12 @@ $('#btnRebuild').addEventListener('click', ()=>{
       const {cat, pri} = h.snapshot || {cat:t.category, pri:t.priority};
       fresh.stats.totalCompleted += 1;
       fresh.stats.byCategory[cat][pri] += 1;
-      fresh.stats.byCategory[cat].score += PRI_WEIGHTS[pri]||1;
+      fresh.stats.byCategory[cat].score += (pri==='High'?3:pri==='Medium'?2:1);
     }
     if(t.doneAt && !(t.history||[]).length){
       fresh.stats.totalCompleted += 1;
       fresh.stats.byCategory[t.category][t.priority] += 1;
-      fresh.stats.byCategory[t.category].score += PRI_WEIGHTS[t.priority]||1;
+      fresh.stats.byCategory[t.category].score += (t.priority==='High'?3:t.priority==='Medium'?2:1);
     }
   }
   fresh.settings = clone(db.settings);
@@ -771,7 +750,7 @@ $('#btnRebuild').addEventListener('click', ()=>{
 /* ========= Boot ========= */
 refreshUI();
 
-/* ========= Service Worker (offline) ========= */
+/* ========= Service Worker ========= */
 if('serviceWorker' in navigator){
   const swCode = `
     const CACHE = 'taskbones-cache-v1';
