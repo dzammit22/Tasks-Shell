@@ -150,24 +150,24 @@
   /* === FIX: Wrap long task titles (Tasks & Modal) === */
   .task .top{
     align-items:flex-start;
-    flex-wrap:wrap;           /* allow badges to wrap under the title */
+    flex-wrap:wrap;
     gap:10px 8px;
   }
   .task .top > input[type="checkbox"]{
     flex:0 0 auto;
-    margin-top:2px;           /* line up with the first line of title */
+    margin-top:2px;
   }
   .task .title{
-    flex:1 1 180px;           /* title takes remaining space, can shrink */
-    min-width:0;              /* enable flexbox shrinking in Safari/Chrome */
-    white-space:normal;       /* allow wrapping */
-    overflow-wrap:anywhere;   /* break long tokens/URLs */
-    word-break:break-word;    /* fallback */
+    flex:1 1 180px;
+    min-width:0;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    word-break:break-word;
     line-height:1.25;
   }
   .task .top .badge{
     white-space:nowrap;
-    flex:0 0 auto;            /* badges do not steal width from title */
+    flex:0 0 auto;
   }
   @media (max-width:420px){
     .task .actions .btn{ padding:10px 12px; }
@@ -242,6 +242,14 @@
           </select>
           <select id="fl_pri"><option value="">All Priorities</option>
             <option>Low</option><option>Medium</option><option>High</option>
+          </select>
+          <!-- NEW: Date filter -->
+          <select id="fl_date" title="Filter by due date">
+            <option value="">All Dates</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="unassigned">Unassigned</option>
           </select>
           <input class="input" id="fl_q" placeholder="Search title/notes">
         </div>
@@ -351,11 +359,28 @@ function toYMDLocal(date){
   return `${y}-${m}-${d}`;
 }
 function dateFromYMD(ymd){
-  const [y,m,d] = ymd.split('-').map(Number);
+  const [y,m,d] = (ymd||'').split('-').map(Number);
+  if(!y||!m||!d) return null;
   return new Date(y, (m||1)-1, d||1);
 }
 function todayYMD(){ return toYMDLocal(new Date()); }
-function fmtDate(ymd){ if(!ymd) return ''; return dateFromYMD(ymd).toLocaleDateString(); }
+function startOfWeekYMD(base=new Date()){ // Monday-start
+  const d = new Date(base);
+  const day = (d.getDay()+6)%7; // 0 for Monday
+  d.setDate(d.getDate()-day);
+  return toYMDLocal(d);
+}
+function endOfWeekYMD(base=new Date()){
+  const d = dateFromYMD(startOfWeekYMD(base));
+  d.setDate(d.getDate()+6);
+  return toYMDLocal(d);
+}
+function monthSpanYMD(base=new Date()){
+  const a = new Date(base.getFullYear(), base.getMonth(), 1);
+  const b = new Date(base.getFullYear(), base.getMonth()+1, 0);
+  return [toYMDLocal(a), toYMDLocal(b)];
+}
+function fmtDate(ymd){ if(!ymd) return ''; const d=dateFromYMD(ymd); return d? d.toLocaleDateString():''; }
 function compareDateYMD(a,b){ return a===b; }
 
 /* ========= DB ========= */
@@ -398,7 +423,7 @@ function loadDB(){
 const $ = sel => document.querySelector(sel);
 function uid(){ return 't_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
-function escapeHTML(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" }[m])); }
+function escapeHTML(s){ return (s||'').toString().replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" }[m])); }
 
 /* ========= Task CRUD ========= */
 function upsertTask(data){
@@ -444,13 +469,41 @@ function adjustStats(cat, pri, delta){
 }
 
 /* ========= Filters ========= */
+function dateFilterMatch(task, mode){
+  const due = task.due || '';
+  if(mode==='unassigned') return !due;
+
+  if(!mode || mode==='') return true; // All Dates
+  if(!due) return false;
+
+  const t = dateFromYMD(due); if(!t) return false;
+  const today = new Date();
+  const ymd = toYMDLocal(t);
+
+  if(mode==='today'){
+    return compareDateYMD(ymd, todayYMD());
+  }
+  if(mode==='week'){
+    const start = startOfWeekYMD(today);
+    const end = endOfWeekYMD(today);
+    return ymd >= start && ymd <= end;
+  }
+  if(mode==='month'){
+    const [start,end] = monthSpanYMD(today);
+    return ymd >= start && ymd <= end;
+  }
+  return true;
+}
+
 function applyTaskFilters(list){
   const cat = $('#fl_cat').value;
   const pri = $('#fl_pri').value;
+  const dateMode = $('#fl_date').value; // NEW
   const q = $('#fl_q').value.trim().toLowerCase();
   return list.filter(t=>{
     if(cat && t.category!==cat) return false;
     if(pri && t.priority!==pri) return false;
+    if(dateMode && !dateFilterMatch(t, dateMode)) return false;
     if(q && !(t.title.toLowerCase().includes(q) || t.notes.toLowerCase().includes(q))) return false;
     return true;
   });
@@ -467,7 +520,7 @@ function renderTasks(){
   const container = $('#taskList');
   container.innerHTML = '';
   if(list.length===0){
-    container.innerHTML = `<div class="muted">No tasks yet. Add one above!</div>`;
+    container.innerHTML = `<div class="muted">No tasks match the current filter.</div>`;
     return;
   }
   for(const t of list){
@@ -492,6 +545,7 @@ function renderTasks(){
   }
 }
 
+/* ========= Stats ========= */
 function renderStats(){
   $('#pillTotals').lastElementChild.textContent = 'Total Completed: ' + db.stats.totalCompleted;
 
@@ -583,7 +637,7 @@ function renderCalendar(){
     if(sum.total>0){
       const pv = document.createElement('div');
       pv.className='pv-row';
-      const topCats = sum.byCatArray.slice(0,4); // [ {cat,count} ... ]
+      const topCats = sum.byCatArray.slice(0,4);
       topCats.forEach(it=>{
         const dot = document.createElement('span');
         dot.className='dotcat cat-'+it.cat;
@@ -626,7 +680,6 @@ function renderCalendar(){
 }
 
 function summarizeDay(items){
-  // returns { total, hasRec, byCatArray:[{cat,count}] (sorted desc) }
   const map = new Map(); let hasRec=false;
   for(const t of items){
     map.set(t.category, (map.get(t.category)||0)+1);
@@ -647,6 +700,7 @@ function projectTasksForDay(ymd, hideRecurring, onlyCat){
       if(!t.due) continue;
       const start = dateFromYMD(t.due);
       const check = dateFromYMD(ymd);
+      if(!start||!check) continue;
       if(t.recurrence==='daily'){
         if(check >= start) res.push(t);
       }else if(t.recurrence==='weekly'){
@@ -662,7 +716,8 @@ function projectTasksForDay(ymd, hideRecurring, onlyCat){
 }
 
 function openDayModal(ymd, items){
-  $('#dayTitle').textContent = dateFromYMD(ymd).toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  const d = dateFromYMD(ymd);
+  $('#dayTitle').textContent = d? d.toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'}) : 'Day';
   const wrap = $('#dayTasks'); wrap.innerHTML='';
   if(items.length===0){ wrap.innerHTML = `<div class="muted">No tasks for this day.</div>`; }
   for(const t of items){
@@ -728,7 +783,16 @@ $('#taskList').addEventListener('click', (e)=>{
   }else if(act==='toggle'){ toggleDone(id); }
 });
 
-$('#fl_cat,#fl_pri,#fl_q').addEventListener('input', renderTasks);
+/* Filters UI */
+// REMOVE the old line like:
+// $('#fl_cat,#fl_pri,#fl_q,#fl_date').addEventListener('input', renderTasks);
+
+// ADD this instead:
+document.querySelectorAll('#fl_cat,#fl_pri,#fl_date')
+  .forEach(el => el.addEventListener('change', renderTasks));
+
+document.querySelector('#fl_q')
+  .addEventListener('input', renderTasks);
 
 /* Calendar controls */
 $('#cal_hide_rec').addEventListener('change', ()=>{
