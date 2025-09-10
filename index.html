@@ -57,16 +57,23 @@
   textarea{min-height:72px; resize:vertical}
   select{appearance:none}
   label.small{font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
-  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:12px; padding:12px 14px; font-weight:600; cursor:pointer; user-select:none; border:1px solid var(--border); background:#0f1835; color:#fff}
+  .btn{
+    position:relative;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    border-radius:12px; padding:12px 14px; font-weight:600; cursor:pointer; user-select:none;
+    border:1px solid var(--border); background:#0f1835; color:#fff;
+    transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
+  }
   .btn.primary{background:linear-gradient(180deg, #5c7dff, #5575f1); border:0}
   .btn.ghost{background:transparent}
   .btn.warn{background:linear-gradient(180deg,#ffb020,#ff9b00); color:#241400; border:0}
   .btn.danger{background:linear-gradient(180deg,#ff6b6b,#ff4d4d); border:0}
+  .btn.success{background:linear-gradient(180deg, #3dd2c6, #1fc3b6); border:0; color:#062d2a}
   .btn:active{transform:translateY(1px)}
   .chip{display:inline-flex; gap:8px; align-items:center; padding:8px 10px; border-radius:999px; border:1px solid var(--border); background:#0e1530; font-size:12px}
   .list{display:flex; flex-direction:column; gap:10px}
 
-  .task{padding:12px; border-radius:12px; border:1px solid var(--border); background:#0e1530; display:grid; gap:6px;}
+  .task{position:relative; padding:12px; border-radius:12px; border:1px solid var(--border); background:#0e1530; display:grid; gap:6px; overflow:hidden}
   .task .top{display:flex; align-items:flex-start; flex-wrap:wrap; gap:10px 8px}
   .task .title{flex:1 1 180px; min-width:0; white-space:normal; overflow-wrap:anywhere; word-break:break-word; line-height:1.25; font-weight:700}
   .badge{font-size:11px; padding:4px 8px; border-radius:999px; border:1px solid var(--border); background:#0f1835; color:#cfe0ff; white-space:nowrap}
@@ -76,9 +83,34 @@
   .badge.med{color:#fde68a; border-color:#4d3a14; background:#241a06}
   .badge.high{color:#fecaca; border-color:#5b1111; background:#260707}
   .muted{color:var(--muted); font-size:12px}
-  .task .actions{display:flex; gap:8px; margin-top:6px}
-  .task.done{opacity:.66; filter:saturate(.8)}
+
+  /* Actions layout: Complete full-width, Edit/Delete half-width side-by-side */
+  .task .actions{
+    display:grid; gap:8px; margin-top:6px;
+    grid-template-columns: 1fr 1fr;
+  }
+  .task .actions .wide{grid-column:1 / -1;} /* Complete spans both */
+  .task .actions .half{grid-column:auto;}    /* Edit/Delete each take half */
+
   .task.done .title{text-decoration:line-through}
+  .task.done{opacity:.9; outline:1px solid rgba(61,210,198,.35)}
+
+  /* Minimal animation for Complete */
+  .btn.success.ping{ animation:btn-pop .22s ease-out; }
+  @keyframes btn-pop{
+    0%{ transform:scale(1); filter:brightness(1); }
+    50%{ transform:scale(1.04); filter:brightness(1.1); }
+    100%{ transform:scale(1); filter:brightness(1); }
+  }
+  .btn.success.ping::after{
+    content:''; position:absolute; inset:0; border-radius:12px;
+    background: radial-gradient(circle at center, rgba(61,210,198,.35) 0%, rgba(61,210,198,0) 60%);
+    opacity:.7; animation:ripple .5s ease-out forwards;
+  }
+  @keyframes ripple{
+    0%{ transform:scale(.6); opacity:.55; }
+    100%{ transform:scale(1.4); opacity:0; }
+  }
 
   /* Calendar */
   .cal{background:#0d142b; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden}
@@ -115,6 +147,8 @@
   nav button{padding:10px 8px; background:transparent; border:0; color:#cbd5ff; font-weight:700; font-size:13px; display:flex; flex-direction:column; align-items:center; gap:4px}
   nav button.active{color:var(--accent)}
   .sp{height:72px}
+
+  /* Modal */
   .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55)}
   .modal.show{display:flex}
   .sheet{width:min(680px, 92vw); max-height:80vh; overflow:auto; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow)}
@@ -253,7 +287,7 @@
           <button type="button" class="btn warn" id="btnRebuild">Rebuild Stats</button>
           <button type="button" class="btn danger" id="btnReset">Reset All</button>
         </div>
-        <p class="muted" style="margin-top:8px">Export includes tasks, completions, and computed stats. Import replaces current data.</p>
+        <p class="muted" style="margin-top:8px">Export includes tasks, per-occurrence completions, and computed stats. Import replaces current data.</p>
       </div>
 
       <div class="section card">
@@ -263,7 +297,7 @@
 
       <div class="section card">
         <h2>About</h2>
-        <p class="muted">Skeleton built for gamification (scores, streaks, badges). All data stays local and works offline.</p>
+        <p class="muted">Built for gamification (scores, streaks, badges). All data stays local and works offline.</p>
       </div>
       <div class="sp"></div>
     </section>
@@ -292,7 +326,7 @@
 
 <script>
 /* ========= Storage & Model ========= */
-const STORAGE_KEY = 'taskbones.v3';
+const STORAGE_KEY = 'taskbones.v6'; // bump to refresh cache
 const CATS = ["Home","Fitness","Finance","Skills","Work","Rose","Other"];
 const PRI_WEIGHTS = { Low:1, Medium:2, High:3 };
 
@@ -321,20 +355,27 @@ function defaultDB(){
     settings: { hideRecurringInCalendar: false }
   };
 }
-function saveDB(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); refreshUI(); }
 function loadDB(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return defaultDB();
-    const parsed = JSON.parse(raw);
-    if(!parsed.stats) parsed.stats = defaultDB().stats;
-    if(!parsed.stats.byCategory) parsed.stats.byCategory = defaultDB().stats.byCategory;
-    for(const c of CATS){ if(!parsed.stats.byCategory[c]) parsed.stats.byCategory[c] = {Low:0,Medium:0,High:0,score:0}; }
-    if(!parsed.settings) parsed.settings = defaultDB().settings;
+    const parsed = raw ? JSON.parse(raw) : defaultDB();
+
+    parsed.stats ||= defaultDB().stats;
+    parsed.stats.byCategory ||= defaultDB().stats.byCategory;
+    for(const c of CATS){ parsed.stats.byCategory[c] ||= {Low:0,Medium:0,High:0,score:0}; }
+    parsed.settings ||= defaultDB().settings;
     if(parsed.settings.hideRecurringInCalendar == null) parsed.settings.hideRecurringInCalendar = false;
+
+    (parsed.tasks||[]).forEach(t=>{
+      if(!t.completedOn) t.completedOn = {};   // per-day completions for recurring
+      if(t.recurrence==null) t.recurrence = 'none';
+      if(t.history==null) t.history = [];
+    });
+
     return parsed;
   }catch(e){ console.warn('DB load error', e); return defaultDB(); }
 }
+function saveDB(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); refreshUI(); }
 
 /* ========= Helpers ========= */
 const $ = sel => document.querySelector(sel);
@@ -347,30 +388,31 @@ function upsertTask(data){
   const now = new Date().toISOString();
   if(data.id){
     const idx = db.tasks.findIndex(t=>t.id===data.id);
-    if(idx>=0){ db.tasks[idx] = { ...db.tasks[idx], ...data }; }
+    if(idx>=0){
+      const keep = db.tasks[idx];
+      db.tasks[idx] = { ...keep, ...data }; // keep completedOn/history
+    }
   }else{
-    data.id = uid();
+    const id = uid();
     db.tasks.push({
-      id:data.id, title:data.title.trim(), category:data.category, priority:data.priority,
-      due:data.due||'', recurrence:data.recurrence||'none', notes:data.notes||'',
-      effort:parseInt(data.effort||0,10), doneAt:null, createdAt:now, history:[]
+      id,
+      title: (data.title||'').trim(),
+      category: data.category,
+      priority: data.priority,
+      due: data.due || '',
+      recurrence: data.recurrence || 'none',
+      notes: data.notes || '',
+      effort: parseInt(data.effort||0,10),
+      doneAt: null,            // for non-recurring only
+      completedOn: {},         // { ymd: true } for recurring
+      createdAt: now,
+      history: []              // {doneAt, occYMD?, snapshot:{cat,pri}}
     });
   }
   saveDB();
 }
 function deleteTask(id){ db.tasks = db.tasks.filter(t=>t.id!==id); saveDB(); }
-function toggleDone(id){
-  const t = db.tasks.find(x=>x.id===id); if(!t) return;
-  if(t.doneAt){
-    const last = t.history.pop(); t.doneAt=null;
-    if(last){ adjustStats(t.category, t.priority, -1); }
-  }else{
-    const when = new Date().toISOString(); t.doneAt=when;
-    t.history.push({doneAt: when, snapshot:{cat:t.category, pri:t.priority}});
-    adjustStats(t.category, t.priority, +1);
-  }
-  saveDB();
-}
+
 function adjustStats(cat, pri, delta){
   db.stats.totalCompleted = Math.max(0, db.stats.totalCompleted + delta);
   const b = db.stats.byCategory[cat]; if(!b) return;
@@ -378,7 +420,45 @@ function adjustStats(cat, pri, delta){
   b.score = Math.max(0, (b.score||0) + delta * (pri==='High'?3:pri==='Medium'?2:1));
 }
 
-/* ========= Recurrence-aware Date Filtering ========= */
+/* ========= Occurrence-aware toggle ========= */
+function toggleDone(id, ymd = null){
+  const t = db.tasks.find(x=>x.id===id);
+  if(!t) return;
+
+  const isRecurring = (t.recurrence && t.recurrence!=='none');
+
+  if(!isRecurring){
+    if(t.doneAt){
+      const last = t.history.pop(); t.doneAt=null;
+      if(last) adjustStats(t.category, t.priority, -1);
+    }else{
+      const when = new Date().toISOString();
+      t.doneAt = when;
+      t.history.push({ doneAt: when, snapshot: { cat:t.category, pri:t.priority } });
+      adjustStats(t.category, t.priority, +1);
+    }
+    saveDB();
+    return;
+  }
+
+  const occ = ymd || todayYMD();
+  t.completedOn ||= {};
+
+  if(t.completedOn[occ]){
+    delete t.completedOn[occ];
+    const i = (t.history||[]).findIndex(h=>h.occYMD===occ);
+    if(i>=0) t.history.splice(i,1);
+    adjustStats(t.category, t.priority, -1);
+  }else{
+    t.completedOn[occ] = true;
+    const when = new Date().toISOString();
+    t.history.push({ doneAt: when, occYMD: occ, snapshot: { cat:t.category, pri:t.priority } });
+    adjustStats(t.category, t.priority, +1);
+  }
+  saveDB();
+}
+
+/* ========= Filters (recurrence-aware) ========= */
 function occursOnDay(task, ymd){
   const rec = task.recurrence || 'none';
   const due = task.due || '';
@@ -432,21 +512,28 @@ function renderTasks(){
   const container = $('#taskList'); container.innerHTML = '';
   if(list.length===0){ container.innerHTML = `<div class="muted">No tasks match the current filter.</div>`; return; }
   for(const t of list){
+    const isRec = t.recurrence && t.recurrence!=='none';
+    const today = todayYMD();
+    const isDone = isRec ? !!(t.completedOn && t.completedOn[today]) : !!t.doneAt;
+
     const el = document.createElement('div');
-    el.className = 'task' + (t.doneAt?' done':'');
+    el.className = 'task' + (isDone && !isRec ? ' done':''); // line-through for single-shot
     el.innerHTML = `
       <div class="top">
-        <input type="checkbox" ${t.doneAt?'checked':''} data-id="${t.id}">
         <div class="title">${escapeHTML(t.title)}</div>
         <span class="badge cat cat-${t.category}">${t.category}</span>
         <span class="badge ${t.priority==='Low'?'low':t.priority==='High'?'high':'med'}">${t.priority}</span>
         ${t.due ? `<span class="badge">Due ${fmtDate(t.due)}</span>`:''}
-        ${t.recurrence!=='none' ? `<span class="badge">↻ ${t.recurrence}</span>`:''}
+        ${isRec ? `<span class="badge">↻ ${t.recurrence}</span>`:''}
+        ${isRec && isDone ? `<span class="badge" title="Completed today">Done • ${fmtDate(today)}</span>`:''}
       </div>
       ${t.notes ? `<div class="muted">${escapeHTML(t.notes)}</div>`:''}
       <div class="actions">
-        <button type="button" class="btn" data-act="edit" data-id="${t.id}">Edit</button>
-        <button type="button" class="btn danger" data-act="del" data-id="${t.id}">Delete</button>
+        <button type="button" class="btn success wide" data-act="complete" data-id="${t.id}" ${isRec?`data-ymd="${today}"`:''}>
+          ${isDone ? 'Undo' : 'Complete'}
+        </button>
+        <button type="button" class="btn half" data-act="edit" data-id="${t.id}">Edit</button>
+        <button type="button" class="btn danger half" data-act="del" data-id="${t.id}">Delete</button>
       </div>
     `;
     container.appendChild(el);
@@ -581,19 +668,24 @@ function openDayModal(ymd, items){
   const wrap = $('#dayTasks'); wrap.innerHTML='';
   if(items.length===0){ wrap.innerHTML = `<div class="muted">No tasks for this day.</div>`; }
   for(const t of items){
+    const isDone = t.recurrence!=='none' ? !!t.completedOn?.[ymd] : !!t.doneAt;
     const el = document.createElement('div');
-    el.className='task' + (t.doneAt?' done':'');
+    el.className='task' + (isDone && t.recurrence==='none' ? ' done':'');
     el.innerHTML = `
       <div class="top">
         <div class="title">${escapeHTML(t.title)}</div>
         <span class="badge cat cat-${t.category}">${t.category}</span>
         <span class="badge ${t.priority==='Low'?'low':t.priority==='High'?'high':'med'}">${t.priority}</span>
         ${t.recurrence!=='none' ? `<span class="badge">↻ ${t.recurrence}</span>`:''}
+        ${isDone ? `<span class="badge" title="Completed on this day">Done • ${fmtDate(ymd)}</span>`:''}
       </div>
       ${t.notes ? `<div class="muted">${escapeHTML(t.notes)}</div>`:''}
       <div class="actions">
-        <button type="button" class="btn" data-act="edit" data-id="${t.id}">Edit</button>
-        <button type="button" class="btn" data-act="jump" data-id="${t.id}">Select in Tasks</button>
+        <button type="button" class="btn success wide" data-act="complete" data-id="${t.id}" data-ymd="${ymd}">
+          ${isDone ? 'Undo' : 'Complete'}
+        </button>
+        <button type="button" class="btn half" data-act="edit" data-id="${t.id}">Edit</button>
+        <button type="button" class="btn danger half" data-act="jump" data-id="${t.id}">Select in Tasks</button>
       </div>`;
     wrap.appendChild(el);
   }
@@ -643,25 +735,26 @@ document.getElementById('taskForm').addEventListener('submit',(e)=>{
   upsertTask(data); clearForm();
 });
 
-/* --- ROBUST taskList activation (click + touchend) --- */
+/* Robust actions (click + touchend) + minimal animation trigger */
 const taskList = document.getElementById('taskList');
 ['click','touchend'].forEach(evt=>{
   taskList.addEventListener(evt,(e)=>{
-    const target = e.target.closest('button[data-act][data-id], input[type="checkbox"][data-id]');
+    const target = e.target.closest('button[data-act][data-id]');
     if(!target) return;
     e.preventDefault(); e.stopPropagation();
 
-    // Checkbox toggle
-    if(target.matches('input[type="checkbox"]')){
-      toggleDone(target.getAttribute('data-id'));
-      return;
-    }
-
-    // Buttons
     const id = target.getAttribute('data-id');
     const act = target.getAttribute('data-act');
+
     if(act==='del'){ if(confirm('Delete this task?')) deleteTask(id); return; }
     if(act==='edit'){ loadTaskIntoForm(id); return; }
+    if(act==='complete'){
+      const occ = target.getAttribute('data-ymd') || todayYMD();
+      toggleDone(id, occ);
+      // Minimal feedback on the button itself
+      target.classList.remove('ping'); void target.offsetWidth; target.classList.add('ping');
+      return;
+    }
   }, {passive:false});
 });
 
@@ -682,12 +775,19 @@ $('#dayModal').addEventListener('click',(e)=>{ if(e.target.id==='dayModal') $('#
     const btn = e.target.closest('[data-act][data-id]'); if(!btn) return;
     e.preventDefault(); e.stopPropagation();
     const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
-    if(act==='edit'){ loadTaskIntoForm(id); $('#dayModal').classList.remove('show'); }
-    else if(act==='jump'){
+
+    if(act==='edit'){
+      loadTaskIntoForm(id); $('#dayModal').classList.remove('show');
+    }else if(act==='jump'){
       document.querySelector('nav button[data-tab="tasks"]').click();
       const node=[...document.querySelectorAll('#taskList .task')].find(n=>n.querySelector(`[data-id="${id}"]`));
       if(node){ node.scrollIntoView({behavior:'smooth', block:'center'}); node.style.outline='2px solid var(--accent)'; setTimeout(()=>node.style.outline='none',1200); }
       $('#dayModal').classList.remove('show');
+    }else if(act==='complete'){
+      const occ = btn.getAttribute('data-ymd');
+      toggleDone(id, occ);
+      btn.classList.remove('ping'); void btn.offsetWidth; btn.classList.add('ping');
+      // keep modal open for rapid toggling
     }
   }, {passive:false});
 });
@@ -719,7 +819,7 @@ $('#fileImport').addEventListener('change', async (e)=>{
   try{
     const text = await f.text(); const incoming = JSON.parse(text);
     if(!incoming.tasks || !incoming.stats || !incoming.settings) throw new Error('Invalid file');
-    if(!confirm('Importing will replace current data. Continue?')) return;
+    (incoming.tasks||[]).forEach(t=>{ t.completedOn ||= {}; t.recurrence ||= 'none'; t.history ||= []; });
     db = incoming; saveDB(); alert('Import complete.');
   }catch(err){ alert('Import failed: ' + err.message); }
   finally{ e.target.value = ''; }
@@ -730,17 +830,18 @@ $('#btnReset').addEventListener('click', ()=>{
 });
 $('#btnRebuild').addEventListener('click', ()=>{
   const fresh = defaultDB(); fresh.tasks = clone(db.tasks);
+  fresh.tasks.forEach(t=>{ t.completedOn ||= {}; t.history ||= []; });
   for(const t of fresh.tasks){
     for(const h of (t.history||[])){
       const {cat, pri} = h.snapshot || {cat:t.category, pri:t.priority};
       fresh.stats.totalCompleted += 1;
       fresh.stats.byCategory[cat][pri] += 1;
-      fresh.stats.byCategory[cat].score += (pri==='High'?3:pri==='Medium'?2:1);
+      fresh.stats.byCategory[cat].score += PRI_WEIGHTS[pri]||1;
     }
-    if(t.doneAt && !(t.history||[]).length){
+    if(t.recurrence==='none' && t.doneAt && !(t.history||[]).length){
       fresh.stats.totalCompleted += 1;
       fresh.stats.byCategory[t.category][t.priority] += 1;
-      fresh.stats.byCategory[t.category].score += (t.priority==='High'?3:t.priority==='Medium'?2:1);
+      fresh.stats.byCategory[t.category].score += PRI_WEIGHTS[t.priority]||1;
     }
   }
   fresh.settings = clone(db.settings);
